@@ -51,22 +51,46 @@ const streamCache = new Map();
 const CACHE_TTL = 25 * 60 * 1000;
 
 function getYtDlpPath() {
-  // Use bundled yt-dlp from node_modules, fall back to system
+  let finalPath = 'yt-dlp';
+
   try {
-    return require('yt-dlp-exec').raw.ytDlpPath || 'yt-dlp';
-  } catch {
-    return 'yt-dlp';
+    const bundledPath = require('yt-dlp-exec').raw.ytDlpPath;
+    if (bundledPath) {
+      finalPath = bundledPath;
+      console.log('[yt-dlp] Using bundled path from library:', finalPath);
+    }
+  } catch (e) {
+    console.log('[yt-dlp] Library require failed, trying fallbacks...');
   }
+
+  // Windows-specific robust check
+  if (process.platform === 'win32') {
+    const possiblePaths = [
+      path.join(process.cwd(), 'node_modules', 'yt-dlp-exec', 'bin', 'yt-dlp.exe'),
+      path.join(__dirname, '..', 'node_modules', 'yt-dlp-exec', 'bin', 'yt-dlp.exe'),
+      path.join(app.getAppPath(), 'node_modules', 'yt-dlp-exec', 'bin', 'yt-dlp.exe')
+    ];
+
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        console.log('[yt-dlp] Found executable at:', p);
+        return p;
+      }
+    }
+  }
+
+  console.log('[yt-dlp] Falling back to system command:', finalPath);
+  return finalPath;
 }
 
-async function getStreamUrl(title, artist) {
-  const cacheKey = `${title}::${artist}`;
+async function getStreamUrl(title, artist, videoId = null) {
+  const cacheKey = videoId ? `id::${videoId}` : `${title}::${artist}`;
   const cached = streamCache.get(cacheKey);
   if (cached && Date.now() - cached.time < CACHE_TTL) {
     return cached.url;
   }
 
-  const query = `ytsearch1:"${title}" ${artist}`;
+  const query = videoId ? `https://www.youtube.com/watch?v=${videoId}` : `ytsearch1:"${title}" ${artist}`;
   const ytDlp = getYtDlpPath();
 
   const { stdout } = await execFileAsync(ytDlp, [
@@ -271,9 +295,9 @@ ipcMain.handle('get-apple-music-token', () => {
   return generateAppleMusicToken();
 });
 
-ipcMain.handle('get-stream-url', async (_e, title, artist) => {
+ipcMain.handle('get-stream-url', async (_e, title, artist, videoId) => {
   try {
-    return await getStreamUrl(title, artist);
+    return await getStreamUrl(title, artist, videoId);
   } catch (err) {
     throw new Error(`Failed to get stream: ${err.message}`);
   }

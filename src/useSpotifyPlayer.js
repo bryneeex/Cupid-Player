@@ -40,7 +40,7 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
 
     async function loadStream() {
       try {
-        const url = await window.cupid.getStreamUrl(t.title, t.artist);
+        const url = await window.cupid.getStreamUrl(t.title, t.artist, t.id || t.videoId);
         if (cancelled) return;
         audio.src = url;
         audio.load();
@@ -66,7 +66,7 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
     const nextTrack = tracks[nextIdx];
     if (nextTrack) {
       // Fire and forget — just warms the cache in main process
-      window.cupid.getStreamUrl(nextTrack.title, nextTrack.artist).catch(() => {});
+      window.cupid.getStreamUrl(nextTrack.title, nextTrack.artist, nextTrack.id || nextTrack.videoId).catch(() => {});
     }
   }, [trackIndex, tracks]);
 
@@ -156,5 +156,6 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
     prev,
     seek,
     loading,
+    setIsPlaying, // Export this so we can force play
   };
 }

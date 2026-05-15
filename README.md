@@ -9,6 +9,7 @@ A pixel-art desktop music player built with Electron, Vite, and React.
 - Interactive progress bar with draggable star indicator
 - Marquee scrolling for long track titles
 - Pink and blue theme switching with persistent preference
+- YouTube integration — search and play any track directly
 - Spotify integration — browse your playlists and play tracks via yt-dlp
 - Apple Music integration — browse your library playlists via MusicKit JS
 - Local MP3 playback
@@ -41,6 +42,12 @@ If your files are missing metadata, you can add it with tools like:
 - [MP3Tag](https://www.mp3tag.de/en/) (Windows)
 - [Kid3](https://kid3.kde.org/) (Mac/Linux/Windows)
 - iTunes/Music.app — right-click a song > Get Info
+
+## YouTube Setup
+
+1. Get a YouTube Data API v3 key from the [Google Cloud Console](https://console.cloud.google.com/)
+2. Add `VITE_YOUTUBE_API_KEY` to your `.env`
+3. Click the settings icon in the player > switch to youtube > search for songs
 
 ## Spotify Setup
 

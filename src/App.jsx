@@ -7,6 +7,7 @@ import { login as spotifyLogin, handleCallback, isLoggedIn as isSpotifyLoggedIn,
 import { fetchPlaylistTracks as fetchSpotifyTracks, fetchMyPlaylists as fetchSpotifyPlaylists } from './spotify/api.js';
 import { login as appleLogin, logout as appleLogout, isLoggedIn as isAppleLoggedIn, initMusicKit } from './apple/auth.js';
 import { fetchMyPlaylists as fetchApplePlaylists, fetchPlaylistTracks as fetchAppleTracks } from './apple/api.js';
+import { searchYouTube } from './youtube/api.js';
 
 import progressBarStars from '../assets/progress_bar_stars.png';
 import star from '../assets/star.png';
@@ -82,6 +83,9 @@ export default function App() {
   const [settingsError, setSettingsError] = useState(null);
   const [musicService, setMusicService] = useState('spotify');
   const [shuffle, setShuffle] = useState(false);
+  const [youtubeQuery, setYoutubeQuery] = useState('');
+  const [youtubeResults, setYoutubeResults] = useState([]);
+  const [searchingYoutube, setSearchingYoutube] = useState(false);
 
   const local = useAudioPlayer(shuffle);
   const streaming = useSpotifyPlayer(streamTracks, shuffle);
@@ -97,6 +101,7 @@ export default function App() {
     next,
     prev,
     seek,
+    setIsPlaying,
   } = player;
 
   // ── Fetch Spotify playlists ────────────────────────────
@@ -159,6 +164,21 @@ export default function App() {
       setLoadingPlaylist(false);
     }
   }, []);
+
+  const handleYoutubeSearch = useCallback(async (e) => {
+    e.preventDefault();
+    if (!youtubeQuery.trim()) return;
+    setSearchingYoutube(true);
+    setSettingsError(null);
+    try {
+      const results = await searchYouTube(youtubeQuery);
+      setYoutubeResults(results);
+    } catch (err) {
+      setSettingsError(err.message);
+    } finally {
+      setSearchingYoutube(false);
+    }
+  }, [youtubeQuery]);
 
   const { theme, toggleTheme, assets } = useTheme();
 
@@ -432,6 +452,12 @@ export default function App() {
                 apple
               </button>
               <button
+                className={`settings-theme-btn ${musicService === 'youtube' ? 'active' : ''}`}
+                onClick={() => setMusicService('youtube')}
+              >
+                youtube
+              </button>
+              <button
                 className={`settings-theme-btn settings-shuffle ${shuffle ? 'active' : ''}`}
                 onClick={() => setShuffle((s) => !s)}
                 title="Shuffle"
@@ -526,6 +552,41 @@ export default function App() {
                   </div>
                 </>
               )
+            )}
+
+            {musicService === 'youtube' && (
+              <div className="youtube-search-container">
+                <form onSubmit={handleYoutubeSearch} className="youtube-search-form">
+                  <input
+                    type="text"
+                    className="youtube-search-input"
+                    placeholder="Search YouTube..."
+                    value={youtubeQuery}
+                    onChange={(e) => setYoutubeQuery(e.target.value)}
+                  />
+                  <button type="submit" className="settings-theme-btn" disabled={searchingYoutube}>
+                    {searchingYoutube ? '...' : 'search'}
+                  </button>
+                </form>
+                <div className="settings-playlist-list">
+                  {youtubeResults.map((t) => (
+                    <button
+                      key={t.id}
+                      className="settings-playlist-item youtube-result-item"
+                      onClick={() => {
+                        setStreamTracks([t]);
+                        setSource('streaming');
+                        if (setIsPlaying) setIsPlaying(true);
+                      }}
+                    >
+                      <div className="youtube-result-info">
+                        <span className="youtube-result-title">{t.title}</span>
+                        <span className="youtube-result-artist">{t.artist}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
 
             {settingsError && <div className="settings-error">{settingsError}</div>}
